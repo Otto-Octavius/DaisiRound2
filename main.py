@@ -14,9 +14,16 @@ import numpy as np
 from PIL import Image
 import ml_collections
 import vision_transformer as vits
+import glob
 
 
 def load_model():
+    files = glob.glob('./frames'+'/*.*')
+    for f in files:
+        os.remove(f)
+    files = glob.glob('./attention'+'/*.*')
+    for f in files:
+        os.remove(f)
     model = vits.__dict__["vit_small"](patch_size=16, num_classes=0)
     for p in model.parameters():
         p.requires_grad = False

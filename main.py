@@ -14,6 +14,8 @@ import numpy as np
 from PIL import Image
 import ml_collections
 import vision_transformer as vits
+
+
 def load_model():
     model = vits.__dict__["vit_small"](patch_size=16, num_classes=0)
     for p in model.parameters():
@@ -27,15 +29,20 @@ def load_model():
         )
         model.load_state_dict(state_dict, strict=True)
     return model
+
+
 FOURCC = {
     "mp4": cv2.VideoWriter_fourcc(*"MP4V"),
     "avi": cv2.VideoWriter_fourcc(*"XVID"),
 }
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+
 class VideoGenerator:
     def __init__(self, args):
         self.args = args
         self.model = self.args.model
+
     def run(self):
         if self.args.input_path is None:
             print(f"Provided input path {self.args.input_path} is non valid.")
@@ -79,6 +86,7 @@ class VideoGenerator:
                 else:
                     print(f"Provided input path {self.args.input_path} doesn't exists.")
                     sys.exit(1)
+
     def _extract_frames_from_video(self, inp: str, out: str):
         vidcap = cv2.VideoCapture(inp)
         self.args.fps = vidcap.get(cv2.CAP_PROP_FPS)
@@ -93,6 +101,7 @@ class VideoGenerator:
             )
             success, image = vidcap.read()
             count += 1
+
     def _generate_video_from_images(self, inp: str, out: str):
         img_array = []
         attention_images_list = sorted(glob.glob(os.path.join(inp, "attn-*.jpg")))
@@ -118,6 +127,7 @@ class VideoGenerator:
             out.write(img_array[i])
         out.release()
         print("Done")
+
     def _inference(self, inp: str, out: str):
         print(f"Generating attention images to {out}")
         for img_path in tqdm(sorted(glob.glob(os.path.join(inp, "*.jpg")))):
@@ -130,7 +140,7 @@ class VideoGenerator:
                         pth_transforms.ToTensor(),
                         pth_transforms.Resize(self.args.resize),
                         pth_transforms.Normalize(
-                            (0.485 * 255, 0.456 * 255, 0.406 * 255),((0.229 * 255) ** 2, (0.224 * 255) ** 2, (0.225 * 255) ** 2)
+                            (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
                         ),
                     ]
                 )
@@ -196,6 +206,8 @@ class VideoGenerator:
                 cmap="inferno",
                 format="jpg",
             )
+
+
 def st_ui():
     args = ml_collections.ConfigDict()
     args.model = load_model()
@@ -246,5 +258,7 @@ def st_ui():
                 file_name="Attention Heatmap.mp4",
                 mime="video/mp4"
             )
+
+
 if __name__ == '__main__':
     st_ui()

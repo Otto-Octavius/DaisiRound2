@@ -242,7 +242,7 @@ def st_ui():
     args.patch_size = 16
     args.output_path = "./"
     args.resize = 512
-    args.threshold = 0.6
+    args.threshold = 0.9
     args.video_only = False
     args.fps = 30.0
     args.video_format = "mp4"

@@ -5,6 +5,7 @@ import cv2
 import streamlit as st
 import tempfile
 import tensorflow as tf
+from tensorflow import keras
 import base64
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -41,6 +42,10 @@ class VideoGenerator:
     def __init__(self, args):
         self.args = args
         self.model = self.args.model
+        self.norm_layer = keras.layers.Normalization(
+            mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
+            variance=[(0.229 * 255) ** 2, (0.224 * 255) ** 2, (0.225 * 255) ** 2],
+        )
 
     def run(self):
         if self.args.input_path is None:

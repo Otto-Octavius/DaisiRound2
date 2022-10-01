@@ -277,7 +277,8 @@ def st_ui():
     if b:
         vg = VideoGenerator(args)
         vg.run()
-        st.video('video.mp4')
+        with open("video.mp4", 'rb') as g:
+            st.video(g)
 
 if __name__ == '__main__':
     st_ui()

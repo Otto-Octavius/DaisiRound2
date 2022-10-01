@@ -276,9 +276,17 @@ def st_ui():
     b = st.button('Generate')
     if b:
         vg = VideoGenerator(args)
-        vg.run()
-        with open("video.mp4", 'rb') as g:
-            st.video(g)
+        with st.spinner('Usually takes 3-5 minutes...'):
+            vg.run()
+        st.success('Download available!')
+        with open("video.mp4", "rb") as file:
+            btn = st.download_button(
+                label="Download Video",
+                data=file,
+                file_name="Attention Heatmap.mp4",
+                mime="video/mp4"
+            )
+
 
 if __name__ == '__main__':
     st_ui()

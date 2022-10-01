@@ -4,12 +4,12 @@ import sys
 import cv2
 import streamlit as st
 import tempfile
-import tensorflow as tf
-from tensorflow import keras
 import base64
+from torchvision import transforms as pth_transforms
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import torch
+import torch.nn as nn
 import numpy as np
 from PIL import Image
 import ml_collections
@@ -42,10 +42,6 @@ class VideoGenerator:
     def __init__(self, args):
         self.args = args
         self.model = self.args.model
-        self.norm_layer = keras.layers.Normalization(
-            mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
-            variance=[(0.229 * 255) ** 2, (0.224 * 255) ** 2, (0.225 * 255) ** 2],
-        )
 
     def run(self):
         if self.args.input_path is None:
@@ -149,60 +145,81 @@ class VideoGenerator:
         out.release()
         print("Done")
 
-    def _preprocess_image(self, image: Image, size: int):
-        image = np.array(image)
-        image_resized = tf.expand_dims(image, 0)
-        shape = tf.cast(tf.shape(image_resized)[1:-1], tf.float32)
-        short_dim = min(shape)
-        scale = size / short_dim
-        new_shape = tf.cast(shape * scale, tf.int32)
-        image_resized = tf.image.resize(
-            image_resized,
-            new_shape,
-        )
-        return self.norm_layer(image_resized).numpy()
 
     def _inference(self, inp: str, out: str):
-        print(f"Generating attention images to {out}")
-
         for img_path in tqdm(sorted(glob.glob(os.path.join(inp, "*.jpg")))):
             with open(img_path, "rb") as f:
                 img = Image.open(f)
                 img = img.convert("RGB")
 
-        preprocessed_image = self._preprocess_image(img, self.args.resize)
+        if self.args.resize is not None:
+            transform = pth_transforms.Compose(
+                [
+                    pth_transforms.ToTensor(),
+                    pth_transforms.Resize(self.args.resize),
+                    pth_transforms.Normalize(
+                        (0.485 * 255, 0.456 * 255, 0.406 * 255), ((0.229 * 255) ** 2, (0.224 * 255) ** 2, (0.225 * 255) ** 2)
+                    ),
+                ]
+            )
+        else:
+            transform = pth_transforms.Compose(
+                [
+                    pth_transforms.ToTensor(),
+                    pth_transforms.Normalize(
+                        (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+                    ),
+                ]
+            )
 
-        h, w = (
-            preprocessed_image.shape[1]
-            - preprocessed_image.shape[1] % self.args.patch_size,
-            preprocessed_image.shape[2]
-            - preprocessed_image.shape[2] % self.args.patch_size,
+        img = transform(img)
+
+        # make the image divisible by the patch size
+        w, h = (
+            img.shape[1] - img.shape[1] % self.args.patch_size,
+            img.shape[2] - img.shape[2] % self.args.patch_size,
         )
-        preprocessed_image = preprocessed_image[:, :h, :w, :]
+        img = img[:, :w, :h].unsqueeze(0)
 
-        h_featmap = preprocessed_image.shape[1] // self.args.patch_size
-        w_featmap = preprocessed_image.shape[2] // self.args.patch_size
+        w_featmap = img.shape[-2] // self.args.patch_size
+        h_featmap = img.shape[-1] // self.args.patch_size
 
-        # Grab the attention scores from the final transformer block.
-        logits, attention_score_dict = self.args.model(
-            preprocessed_image, training=False
-        )
-        attentions = attention_score_dict["transformer_block_11_att"].numpy()
+        attentions = self.model.get_last_selfattention(img.to(DEVICE))
 
         nh = attentions.shape[1]  # number of head
 
         # we keep only the output patch attention
         attentions = attentions[0, :, 0, 1:].reshape(nh, -1)
-        attentions = attentions.reshape(nh, h_featmap, w_featmap)
-        attentions = attentions.transpose((1, 2, 0))
 
+        # we keep only a certain percentage of the mass
+        val, idx = torch.sort(attentions)
+        val /= torch.sum(val, dim=1, keepdim=True)
+        cumval = torch.cumsum(val, dim=1)
+        th_attn = cumval > (1 - self.args.threshold)
+        idx2 = torch.argsort(idx)
+        for head in range(nh):
+            th_attn[head] = th_attn[head][idx2[head]]
+        th_attn = th_attn.reshape(nh, w_featmap, h_featmap).float()
         # interpolate
-        attentions = tf.image.resize(
-            attentions,
-            size=(
-                h_featmap * self.args.patch_size,
-                w_featmap * self.args.patch_size,
-            ),
+        th_attn = (
+            nn.functional.interpolate(
+                th_attn.unsqueeze(0),
+                scale_factor=self.args.patch_size,
+                mode="nearest",
+            )[0]
+            .cpu()
+            .numpy()
+        )
+
+        attentions = attentions.reshape(nh, w_featmap, h_featmap)
+        attentions = (
+            nn.functional.interpolate(
+                attentions.unsqueeze(0),
+                scale_factor=self.args.patch_size,
+                mode="nearest",
+            )[0]
+            .cpu()
+            .numpy()
         )
 
         # save attentions heatmaps
@@ -210,8 +227,8 @@ class VideoGenerator:
         plt.imsave(
             fname=fname,
             arr=sum(
-                attentions[..., i] * 1 / attentions.shape[-1]
-                for i in range(attentions.shape[-1])
+                attentions[i] * 1 / attentions.shape[0]
+                for i in range(attentions.shape[0])
             ),
             cmap="inferno",
             format="jpg",

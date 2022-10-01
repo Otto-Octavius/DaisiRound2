@@ -158,7 +158,7 @@ class VideoGenerator:
                     pth_transforms.ToTensor(),
                     pth_transforms.Resize(self.args.resize),
                     pth_transforms.Normalize(
-                        (0.485 * 255, 0.456 * 255, 0.406 * 255), ((0.229 * 255) ** 2, (0.224 * 255) ** 2, (0.225 * 255) ** 2)
+                        (123.675, 116.28, 103.53), (0.229, 0.224, 0.225)
                     ),
                 ]
             )

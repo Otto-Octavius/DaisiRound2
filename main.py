@@ -210,7 +210,8 @@ class VideoGenerator:
 
 def st_ui():
     args = ml_collections.ConfigDict()
-    args.model = load_model()
+    with st.spinner('Loading the Model: '):
+        args.model = load_model()
     args.patch_size = 16
     args.output_path = "./"
     args.resize = 512
@@ -220,7 +221,7 @@ def st_ui():
     args.video_format = "mp4"
     uploaded_file = st.sidebar.file_uploader("Load your own Video", type=["mp4", "mpeg"])
     st.title("Extracting Attention Heatmaps :mag:")
-    st.info("Based on Facebook Research's DINO, this is a modified version of "
+    st.info("Based on Facebook Research's DINO, this is a small version of "
             "the Self-Supervised Learning algorithm. The GIF below depicts it's working:  ")
     file_ = open("Corgi.gif", "rb")
     contents = file_.read()
@@ -248,8 +249,9 @@ def st_ui():
     b = st.button('Generate')
     if b:
         vg = VideoGenerator(args)
-        with st.spinner('Usually takes 3-5 minutes...'):
+        with st.spinner('Takes longer for longer video samples...'):
             vg.run()
+        st.info("A highly resized and normalised Video Sequence is exported for now. Future development includes HD attention maps")
         st.success('Download available!')
         with open("video.mp4", "rb") as file:
             btn = st.download_button(
@@ -258,7 +260,7 @@ def st_ui():
                 file_name="Attention Heatmap.mp4",
                 mime="video/mp4"
             )
-
+         
 
 if __name__ == '__main__':
     st_ui()

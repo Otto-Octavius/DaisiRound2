@@ -158,20 +158,11 @@ class VideoGenerator:
                     pth_transforms.ToTensor(),
                     pth_transforms.Resize(self.args.resize),
                     pth_transforms.Normalize(
-                        (123.675, 116.28, 103.53), (0.229, 0.224, 0.225)
-                    ),
-                ]
-            )
-        else:
-            transform = pth_transforms.Compose(
-                [
-                    pth_transforms.ToTensor(),
-                    pth_transforms.Normalize(
                         (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
                     ),
                 ]
             )
-
+ 
         img = transform(img)
 
         # make the image divisible by the patch size

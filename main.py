@@ -5,7 +5,6 @@ import cv2
 import streamlit as st
 import tempfile
 import base64
-import tensorflow as tf
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import torch
@@ -155,17 +154,23 @@ class VideoGenerator:
                 img = img.convert("RGB")
 
             if self.args.resize is not None:
-                image = np.array(img)
-                image_resized = tf.expand_dims(image, 0)
-                shape = tf.cast(tf.shape(image_resized)[1:-1], tf.float32)
-                short_dim = min(shape)
-                scale = self.args.resize / short_dim
-                new_shape = tf.cast(shape * scale, tf.int32)
-                image_resized = tf.image.resize(
-                    image_resized,
-                    new_shape,
+                transform = pth_transforms.Compose(
+                    [
+                        pth_transforms.ToTensor(),
+                        pth_transforms.Resize(self.args.resize),
+                    ]
                 )
-                img = image_resized
+            else:
+                transform = pth_transforms.Compose(
+                    [
+                        pth_transforms.ToTensor(),
+                        pth_transforms.Normalize(
+                            (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+                        ),
+                    ]
+                )
+
+            img = transform(img)
 
             # make the image divisible by the patch size
             w, h = (

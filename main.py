@@ -224,6 +224,9 @@ def generate(v, args):
     .
     This function takes in two parameters. The input path and the arguments. These are later sent to the class that generates and saves the 
     Attention heatmaps.
+    
+    :param str v: The input path
+    :param configdict arg: A Dictionary that contains all parameters for Video generation: Model, Patch size, Resize, Threshold and FPS.
     """
     args.input_path = v
     vg = VideoGenerator(args)

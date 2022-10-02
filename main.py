@@ -22,10 +22,10 @@ def load_model():
     .
     This function loads the model. The preffered model is the 'small' ViT model which is a reduced base model which will be more practical to train on 2xGPU setup than the official model. It was just trained on ImageNet-1k from scratch, but achieved results comparable to the official base model training results on pure ImageNet-1k.
     """
-    files = glob.glob('./frames'+'/*.*')
+    files = glob.glob('./frames' + '/*.*')
     for f in files:
         os.remove(f)
-    files = glob.glob('./attention'+'/*.*')
+    files = glob.glob('./attention' + '/*.*')
     for f in files:
         os.remove(f)
     model = vits.__dict__["vit_small"](patch_size=16, num_classes=0)
@@ -219,6 +219,17 @@ class VideoGenerator:
             )
 
 
+def generate(v, args):
+    """
+    .
+    This function takes in two parameters. The input path and the arguments. These are later sent to the class that generates and saves the 
+    Attention heatmaps.
+    """
+    args.input_path = v
+    vg = VideoGenerator(args)
+    vg.run()
+
+
 def st_ui():
     """
     .
@@ -261,13 +272,12 @@ def st_ui():
         video_bytes = video_file.read()  # reading the file
         st.sidebar.video(video_bytes)
         v = 'corgi.mp4'
-    args.input_path = v
     b = st.button('Generate')
     if b:
-        vg = VideoGenerator(args)
-        with st.spinner('Takes longer for longer video samples...'):
-            vg.run()
-        st.info("A highly resized and normalised Video Sequence is exported for now. Future development includes HD attention maps")
+        with st.spinner('Takes longer for high quality and longer video samples...'):
+            generate(v, args)
+        st.info(
+            "A highly resized & normalised Video Sequence is exported for now. Future development includes HD attention maps")
         st.success('Download available!')
         with open("video.mp4", "rb") as file:
             btn = st.download_button(
@@ -276,7 +286,7 @@ def st_ui():
                 file_name="Attention Heatmap.mp4",
                 mime="video/mp4"
             )
-         
+
 
 if __name__ == '__main__':
     st_ui()

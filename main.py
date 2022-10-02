@@ -18,6 +18,10 @@ import glob
 
 
 def load_model():
+    """
+    .
+    This function loads the model. The preffered model is the 'small' ViT model which is a reduced base model which will be more practical to train on 2xGPU setup than the official model. It was just trained on ImageNet-1k from scratch, but achieved results comparable to the official base model training results on pure ImageNet-1k.
+    """
     files = glob.glob('./frames'+'/*.*')
     for f in files:
         os.remove(f)
@@ -216,6 +220,11 @@ class VideoGenerator:
 
 
 def st_ui():
+    """
+    .
+    This function creates a Streamlit UI and performs the task of getting in the video and having a button to generate Attention heatmaps. Upon clicking, the video
+    is sent along with some arguments to the class that generates and save the video, which can be later downloaded.
+    """
     args = ml_collections.ConfigDict()
     with st.spinner('Loading the Model: '):
         args.model = load_model()

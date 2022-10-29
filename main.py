@@ -16,6 +16,8 @@ import ml_collections
 import vision_transformer as vits
 import glob
 
+def api_call_check():
+    return "Working"
 
 def load_model():
     """

@@ -17,6 +17,10 @@ import vision_transformer as vits
 import glob
 
 def api_call_check():
+    """
+    .
+    This function checks the availability of API Calls (This was done to cross check over recent Daisi Pebble errors during Calls)
+    """
     return "Working"
 
 def load_model():
